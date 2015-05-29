@@ -18,7 +18,7 @@ function drawBurst($element, layout, fullMatrix) {
 
     //create JSON container object
     var myJSON = {
-        "name": "root", // layout.title,
+        "name": "", // layout.title,
         "children": []
     };
 
@@ -65,14 +65,28 @@ function drawBurst($element, layout, fullMatrix) {
     .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
      
     var partition = d3.layout.partition()
-    .size([2 * Math.PI, radius * radius])
+  //  .size([2 * Math.PI, radius * radius])
     .value(function(d) { return d.size; });
     
+    /*
     var arc = d3.svg.arc()
     .startAngle(function(d) { return d.x; })
     .endAngle(function(d) { return d.x + d.dx; })
     .innerRadius(function(d) { return Math.sqrt(d.y); })
     .outerRadius(function(d) { return Math.sqrt(d.y + d.dy); });
+    */
+
+    var arc = d3.svg.arc().startAngle(function (d) {
+        return Math.max(0, Math.min(2 * Math.PI, x(d.x)));
+    }).endAngle(function (d) {
+        return Math.max(0, Math.min(2 * Math.PI, x(d.x + d.dx)));
+    }).innerRadius(function (d) {
+        return Math.max(0, y(d.y));
+    }).outerRadius(function (d) {
+        return Math.max(0, y(d.y + d.dy));
+    });
+
+
 
   	createVisualization(myJSON);
   
@@ -96,15 +110,32 @@ function createVisualization(json) {
       return (d.dx > 0.005); // 0.005 radians = 0.29 degrees
       });
 
-  var path = vis.data([json]).selectAll("path")
-      .data(nodes)
-      .enter().append("svg:path")
+
+  var g = vis.selectAll("g").data(nodes).enter().append("g");
+
+
+  var path = g /*vis.data([json]).selectAll("path").data(nodes).enter()*/
+      .append("svg:path")
       .attr("display", function(d) { return d.depth ? null : "none"; })
       .attr("d", arc)
       .attr("fill-rule", "evenodd")
       .style("fill", function(d) { return color((d.children ? d : d.parent).name);})  
       .style("opacity", 0.7)
       .on("mouseover", mouseover);
+
+  var text;
+    if (width > 300) {
+        text = g.append("text").attr("transform", function (d) {
+            return "rotate(" + senseD3.computeTextRotation(d, x) + ")";
+        }).attr("x", function (d) {
+            return y(d.y);
+        }).attr("dx", "6") // margin
+        .attr("dy", ".35em") // vertical-align
+        .text(function (d) {
+            return d.name;
+        });
+    }    
+
 
   // Add the mouseleave handler to the bounding circle.
   d3.select("#container").on("mouseleave", mouseleave);
